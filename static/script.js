@@ -1,26 +1,41 @@
 async function calculate() {
-    const materialLength = parseFloat(document.getElementById("materialLength").value);
-    const kerfWidth = parseFloat(document.getElementById("kerfWidth").value);
+    const materialLengthInput = document.getElementById("materialLength");
+    const kerfWidthInput = document.getElementById("kerfWidth");
+    const materialLength = parseFloat(materialLengthInput.value);
+    const kerfWidth = parseFloat(kerfWidthInput.value);
     const pieces = [];
+
+    // Limpar validações anteriores
+    materialLengthInput.classList.remove("is-invalid");
+    kerfWidthInput.classList.remove("is-invalid");
+    document.querySelectorAll(".piece-length, .piece-qty").forEach(input => input.classList.remove("is-invalid"));
 
     // Validação
     if (isNaN(materialLength) || materialLength <= 0) {
-        alert("Por favor, insira um comprimento de material válido.");
+        materialLengthInput.classList.add("is-invalid");
         return;
     }
     if (isNaN(kerfWidth) || kerfWidth < 0) {
-        alert("Por favor, insira uma espessura de corte válida.");
+        kerfWidthInput.classList.add("is-invalid");
         return;
     }
 
     let valid = true;
     document.querySelectorAll("#pieces .piece-row").forEach(row => {
-        const length = parseFloat(row.querySelector(".piece-length").value);
-        const qty = parseInt(row.querySelector(".piece-qty").value);
+        const lengthInput = row.querySelector(".piece-length");
+        const qtyInput = row.querySelector(".piece-qty");
+        const length = parseFloat(lengthInput.value);
+        const qty = parseInt(qtyInput.value);
         
-        if (isNaN(length) || length <= 0 || isNaN(qty) || qty <= 0) {
+        if (isNaN(length) || length <= 0) {
+            lengthInput.classList.add("is-invalid");
             valid = false;
-        } else {
+        }
+        if (isNaN(qty) || qty <= 0) {
+            qtyInput.classList.add("is-invalid");
+            valid = false;
+        }
+        if (valid) {
             for (let i = 0; i < qty; i++) {
                 pieces.push(length);
             }
@@ -28,7 +43,6 @@ async function calculate() {
     });
 
     if (!valid || pieces.length === 0) {
-        alert("Por favor, insira pelo menos uma peça com comprimento e quantidade válidos.");
         return;
     }
 
@@ -122,15 +136,31 @@ async function downloadPDF() {
 function addPiece() {
     const piecesDiv = document.getElementById("pieces");
     const newRow = document.createElement("div");
-    newRow.className = "piece-row";
+    newRow.className = "piece-row d-flex gap-2 mb-2";
     newRow.innerHTML = `
-        <input type="number" class="piece-length" placeholder="Comprimento (mm)" min="1">
-        <input type="number" class="piece-qty" placeholder="Quantidade" value="1" min="1">
-        <button class="remove-btn" onclick="removePiece(this)">Remover</button>
+        <input type="number" class="form-control piece-length" placeholder="Comprimento (mm)" min="1">
+        <input type="number" class="form-control piece-qty" placeholder="Quantidade" value="1" min="1">
+        <button class="btn btn-danger remove-btn" onclick="removePiece(this)"><i class="bi bi-trash"></i> Remover</button>
     `;
     piecesDiv.appendChild(newRow);
 }
 
 function removePiece(button) {
     button.parentElement.remove();
+}
+
+function clearForm() {
+    document.getElementById("materialLength").value = "6000";
+    document.getElementById("kerfWidth").value = "3";
+    const piecesDiv = document.getElementById("pieces");
+    piecesDiv.innerHTML = `
+        <div class="piece-row d-flex gap-2 mb-2">
+            <input type="number" class="form-control piece-length" placeholder="Comprimento (mm)" min="1">
+            <input type="number" class="form-control piece-qty" placeholder="Quantidade" value="1" min="1">
+            <button class="btn btn-danger remove-btn" onclick="removePiece(this)"><i class="bi bi-trash"></i> Remover</button>
+        </div>
+    `;
+    document.getElementById("result").innerHTML = "";
+    document.getElementById("downloadBtn").style.display = "none";
+    document.querySelectorAll(".piece-length, .piece-qty, #materialLength, #kerfWidth").forEach(input => input.classList.remove("is-invalid"));
 }
