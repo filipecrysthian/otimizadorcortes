@@ -1,9 +1,8 @@
 from flask import Flask, render_template, request, jsonify, send_file
-import os
 from backend.cut_optimizer import optimize_cuts
-from pylatex import Document, Section, Subsection, Command, Package
-from pylatex.utils import NoEscape
-import io
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -37,39 +36,35 @@ def download_pdf():
     kerf = data.get("kerf", 0)
     result = optimize_cuts(material_length, pieces, kerf)
 
-    # Criar documento LaTeX
-    doc = Document()
-    doc.packages.append(Package('geometry', options=['a4paper', 'margin=1in']))
-    doc.packages.append(Package('fontenc', options=['T1']))
-    doc.packages.append(Package('inputenc', options=['utf8']))
-    doc.packages.append(Package('lmodern'))
-    doc.preamble.append(Command('title', 'Relatório de Otimização de Cortes'))
-    doc.preamble.append(Command('author', 'xAI Cut Optimizer'))
-    doc.preamble.append(Command('date', NoEscape(r'\today')))
-    doc.append(NoEscape(r'\maketitle'))
-
-    with doc.create(Section('Resultados')):
-        doc.append(f'Comprimento do Material: {material_length}mm\n')
-        doc.append(f'Espessura do Corte (Kerf): {kerf}mm\n')
-        with doc.create(Subsection('Cortes Otimizados')):
-            for i, bar in enumerate(result["bars"], 1):
-                pieces_str = " x ".join(f"{length}mm" for length in bar["pieces"])
-                doc.append(f'Seguimento {i}: {pieces_str} | Desperdício: {bar["remaining"]:.2f}mm\n')
-        with doc.create(Subsection('Resumo')):
-            doc.append(f'Barras necessárias: {result["total_bars"]}\n')
-            doc.append(f'Desperdício total: {result["total_waste"]:.2f}mm\n')
-            doc.append(f'Eficiência: {result["efficiency"]}%')
-
-    # Gerar PDF em memória
-    pdf_buffer = io.BytesIO()
-    doc.generate_pdf('output', clean_tex=True, compiler='pdflatex')
-    with open('output.pdf', 'rb') as f:
-        pdf_buffer.write(f.read())
-    pdf_buffer.seek(0)
-    os.remove('output.pdf')  # Limpar arquivo temporário
+    # Criar PDF com reportlab
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    c.setFont("Helvetica", 14)
+    c.drawString(100, 800, "Relatório de Otimização de Cortes")
+    c.setFont("Helvetica", 12)
+    c.drawString(100, 780, f"Comprimento do Material: {material_length}mm")
+    c.drawString(100, 760, f"Espessura do Corte (Kerf): {kerf}mm")
+    y = 740
+    c.drawString(100, y, "Cortes Otimizados:")
+    y -= 20
+    for i, bar in enumerate(result["bars"], 1):
+        pieces_str = " x ".join(f"{length}mm" for length in bar["pieces"])
+        c.drawString(100, y, f"Segmento {i}: {pieces_str} | Desperdício: {bar['remaining']:.2f}mm")
+        y -= 20
+    y -= 20
+    c.drawString(100, y, "Resumo:")
+    y -= 20
+    c.drawString(100, y, f"Barras necessárias: {result['total_bars']}")
+    y -= 20
+    c.drawString(100, y, f"Desperdício total: {result['total_waste']:.2f}mm")
+    y -= 20
+    c.drawString(100, y, f"Eficiência: {result['efficiency']}%")
+    c.showPage()
+    c.save()
+    buffer.seek(0)
 
     return send_file(
-        pdf_buffer,
+        buffer,
         as_attachment=True,
         download_name='relatorio_cortes.pdf',
         mimetype='application/pdf'
