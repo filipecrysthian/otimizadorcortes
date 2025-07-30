@@ -1,0 +1,42 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.piece-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+/* Estilo para as barras */
+.bar {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 5px;
+    border-left: 4px solid #4CAF50;
+}
+
+/* Estilo para o resumo */
+.totals {
+    margin-top: 20px;
+    padding: 15px;
+    background: #e9f7ef;
+    border-radius: 5px;
+    border: 1px solid #4CAF50;
+}
+
+.totals h3 {
+    margin-top: 0;
+    color: #2e7d32;
+}
