@@ -67,7 +67,7 @@ function displayResult(result) {
             .join(", ");
         const barDiv = document.createElement("div");
         barDiv.className = "bar";
-        barDiv.innerHTML = `Seguimento ${index + 1}: ${piecesStr} | Desperdício: ${bar.remaining.toFixed(2)}mm`;
+        barDiv.innerHTML = `Segmento ${index + 1}: ${piecesStr} | Desperdício: ${bar.remaining.toFixed(2)}mm`;
         resultDiv.appendChild(barDiv);
     });
 

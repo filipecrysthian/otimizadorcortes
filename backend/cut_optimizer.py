@@ -23,13 +23,11 @@ def optimize_cuts(material_length, pieces, kerf=0):
     for i, piece_length in enumerate(unique_pieces):
         prob += lpSum(x[i][j] for j in range(max_bars)) >= piece_counts[piece_length], f"Demand_{i}"
 
-    # 2. Respeitar o comprimento da barra, considerando kerf
+    # 2. Respeitar o comprimento da barra, considerando kerf após cada peça
     for j in range(max_bars):
-        # Total de peças na barra j
         total_pieces = lpSum(x[i][j] for i in range(len(unique_pieces)))
-        # Total de espaço usado: soma das peças + kerf para cada peça exceto a última
         total_length = lpSum(x[i][j] * unique_pieces[i] for i in range(len(unique_pieces)))
-        kerf_constraint = (total_pieces - 1) * kerf  # Kerf só entre peças
+        kerf_constraint = total_pieces * kerf  # Kerf após cada peça, incluindo a última
         prob += total_length + kerf_constraint <= material_length * y[j], f"Capacity_{j}"
 
     # Resolver o problema
@@ -49,7 +47,7 @@ def optimize_cuts(material_length, pieces, kerf=0):
                 for _ in range(count):
                     bar_pieces.append(unique_pieces[i])
             if bar_pieces:
-                total_used = sum(bar_pieces) + (len(bar_pieces) - 1) * kerf
+                total_used = sum(bar_pieces) + len(bar_pieces) * kerf  # Incluir kerf para cada peça
                 bars.append({
                     "pieces": bar_pieces,
                     "remaining": material_length - total_used
