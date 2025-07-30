@@ -1,18 +1,35 @@
 async function calculate() {
     const materialLength = parseFloat(document.getElementById("materialLength").value);
-    const kerfWidth = parseFloat(document.getElementById("kerfWidth").value); // Novo!
+    const kerfWidth = parseFloat(document.getElementById("kerfWidth").value);
     const pieces = [];
 
+    if (isNaN(materialLength) || materialLength <= 0) {
+        alert("Por favor, insira um comprimento de material válido.");
+        return;
+    }
+    if (isNaN(kerfWidth) || kerfWidth < 0) {
+        alert("Por favor, insira uma espessura de corte válida.");
+        return;
+    }
+
+    let valid = true;
     document.querySelectorAll("#pieces .piece-row").forEach(row => {
         const length = parseFloat(row.querySelector(".piece-length").value);
         const qty = parseInt(row.querySelector(".piece-qty").value);
         
-        if (length && qty) {
+        if (isNaN(length) || length <= 0 || isNaN(qty) || qty <= 0) {
+            valid = false;
+        } else {
             for (let i = 0; i < qty; i++) {
-                pieces.push(length + kerfWidth); // Adiciona kerf a cada peça!
+                pieces.push(length);
             }
         }
     });
+
+    if (!valid || pieces.length === 0) {
+        alert("Por favor, insira pelo menos uma peça com comprimento e quantidade válidos.");
+        return;
+    }
 
     const response = await fetch("/optimize", {
         method: "POST",
@@ -20,7 +37,7 @@ async function calculate() {
         body: JSON.stringify({
             material_length: materialLength,
             pieces: pieces,
-            kerf: kerfWidth // Envia kerf para o backend (opcional)
+            kerf: kerfWidth  // O backend aplica o kerf corretamente
         })
     });
     
