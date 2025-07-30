@@ -34,7 +34,21 @@ def download_pdf():
     material_length = data.get("material_length")
     pieces = data.get("pieces", [])
     kerf = data.get("kerf", 0)
+    names = data.get("names", [])
+
+    # Validação
+    if not isinstance(material_length, (int, float)) or material_length <= 0:
+        return jsonify({"error": "Comprimento do material deve ser maior que 0"}), 400
+    if not pieces or not all(isinstance(p, (int, float)) and p > 0 for p in pieces):
+        return jsonify({"error": "Peças devem ser uma lista de números positivos"}), 400
+    if not isinstance(kerf, (int, float)) or kerf < 0:
+        return jsonify({"error": "Espessura do corte não pode ser negativa"}), 400
+
     result = optimize_cuts(material_length, pieces, kerf)
+
+    # Adicionar nomes aos resultados
+    for i, bar in enumerate(result["bars"]):
+        bar["name"] = names[i] if i < len(names) else f"Segmento {i + 1}"
 
     # Criar PDF com reportlab
     buffer = BytesIO()
@@ -47,9 +61,9 @@ def download_pdf():
     y = 740
     c.drawString(100, y, "Cortes Otimizados:")
     y -= 20
-    for i, bar in enumerate(result["bars"], 1):
+    for i, bar in enumerate(result["bars"]):
         pieces_str = " x ".join(f"{length}mm" for length in bar["pieces"])
-        c.drawString(100, y, f"Segmento {i}: {pieces_str} | Desperdício: {bar['remaining']:.2f}mm")
+        c.drawString(100, y, f"Segmento {bar['name']}: {pieces_str} | Desperdício: {bar['remaining']:.2f}mm")
         y -= 20
     y -= 20
     c.drawString(100, y, "Resumo:")

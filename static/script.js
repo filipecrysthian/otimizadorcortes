@@ -4,11 +4,12 @@ async function calculate() {
     const materialLength = parseFloat(materialLengthInput.value);
     const kerfWidth = parseFloat(kerfWidthInput.value);
     const pieces = [];
+    const pieceNames = [];
 
     // Limpar validações anteriores
     materialLengthInput.classList.remove("is-invalid");
     kerfWidthInput.classList.remove("is-invalid");
-    document.querySelectorAll(".piece-length, .piece-qty").forEach(input => input.classList.remove("is-invalid"));
+    document.querySelectorAll(".piece-name, .piece-length, .piece-qty").forEach(input => input.classList.remove("is-invalid"));
 
     // Validação
     if (isNaN(materialLength) || materialLength <= 0) {
@@ -21,9 +22,11 @@ async function calculate() {
     }
 
     let valid = true;
-    document.querySelectorAll("#pieces .piece-row").forEach(row => {
+    document.querySelectorAll("#pieces .piece-row").forEach((row, index) => {
+        const nameInput = row.querySelector(".piece-name");
         const lengthInput = row.querySelector(".piece-length");
         const qtyInput = row.querySelector(".piece-qty");
+        const name = nameInput.value.trim() || `Segmento ${index + 1}`;
         const length = parseFloat(lengthInput.value);
         const qty = parseInt(qtyInput.value);
         
@@ -38,6 +41,7 @@ async function calculate() {
         if (valid) {
             for (let i = 0; i < qty; i++) {
                 pieces.push(length);
+                pieceNames.push(name);
             }
         }
     });
@@ -62,6 +66,11 @@ async function calculate() {
         return;
     }
     
+    // Adicionar nomes aos resultados
+    result.bars.forEach((bar, index) => {
+        bar.name = pieceNames[index] || `Segmento ${index + 1}`;
+    });
+
     displayResult(result);
     document.getElementById("downloadBtn").style.display = "inline-block";
 }
@@ -81,7 +90,7 @@ function displayResult(result) {
             .join(", ");
         const barDiv = document.createElement("div");
         barDiv.className = "bar";
-        barDiv.innerHTML = `Segmento ${index + 1}: ${piecesStr} | Desperdício: ${bar.remaining.toFixed(2)}mm`;
+        barDiv.innerHTML = `Segmento ${bar.name}: ${piecesStr} | Desperdício: ${bar.remaining.toFixed(2)}mm`;
         resultDiv.appendChild(barDiv);
     });
 
@@ -101,24 +110,49 @@ async function downloadPDF() {
     const materialLength = parseFloat(document.getElementById("materialLength").value);
     const kerfWidth = parseFloat(document.getElementById("kerfWidth").value);
     const pieces = [];
+    const pieceNames = [];
 
-    document.querySelectorAll("#pieces .piece-row").forEach(row => {
+    document.querySelectorAll("#pieces .piece-row").forEach((row, index) => {
+        const name = row.querySelector(".piece-name").value.trim() || `Segmento ${index + 1}`;
         const length = parseFloat(row.querySelector(".piece-length").value);
         const qty = parseInt(row.querySelector(".piece-qty").value);
         if (length && qty) {
             for (let i = 0; i < qty; i++) {
                 pieces.push(length);
+                pieceNames.push(name);
             }
         }
     });
 
-    const response = await fetch("/download_pdf", {
+    const response = await fetch("/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             material_length: materialLength,
             pieces: pieces,
             kerf: kerfWidth
+        })
+    });
+
+    const result = await response.json();
+    if (result.error) {
+        alert(result.error);
+        return;
+    }
+
+    // Adicionar nomes aos resultados para o PDF
+    result.bars.forEach((bar, index) => {
+        bar.name = pieceNames[index] || `Segmento ${index + 1}`;
+    });
+
+    const pdfResponse = await fetch("/download_pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            material_length: materialLength,
+            pieces: pieces,
+            kerf: kerfWidth,
+            names: pieceNames
         })
     });
 
@@ -135,9 +169,11 @@ async function downloadPDF() {
 
 function addPiece() {
     const piecesDiv = document.getElementById("pieces");
+    const pieceCount = document.querySelectorAll("#pieces .piece-row").length + 1;
     const newRow = document.createElement("div");
     newRow.className = "piece-row d-flex gap-2 mb-2";
     newRow.innerHTML = `
+        <input type="text" class="form-control piece-name" placeholder="Nome do Segmento (ex.: Segmento ${pieceCount})">
         <input type="number" class="form-control piece-length" placeholder="Comprimento (mm)" min="1">
         <input type="number" class="form-control piece-qty" placeholder="Quantidade" value="1" min="1">
         <button class="btn btn-danger remove-btn" onclick="removePiece(this)"><i class="bi bi-trash"></i> Remover</button>
@@ -155,6 +191,7 @@ function clearForm() {
     const piecesDiv = document.getElementById("pieces");
     piecesDiv.innerHTML = `
         <div class="piece-row d-flex gap-2 mb-2">
+            <input type="text" class="form-control piece-name" placeholder="Nome do Segmento (ex.: Segmento 1)">
             <input type="number" class="form-control piece-length" placeholder="Comprimento (mm)" min="1">
             <input type="number" class="form-control piece-qty" placeholder="Quantidade" value="1" min="1">
             <button class="btn btn-danger remove-btn" onclick="removePiece(this)"><i class="bi bi-trash"></i> Remover</button>
@@ -162,5 +199,5 @@ function clearForm() {
     `;
     document.getElementById("result").innerHTML = "";
     document.getElementById("downloadBtn").style.display = "none";
-    document.querySelectorAll(".piece-length, .piece-qty, #materialLength, #kerfWidth").forEach(input => input.classList.remove("is-invalid"));
+    document.querySelectorAll(".piece-name, .piece-length, .piece-qty, #materialLength, #kerfWidth").forEach(input => input.classList.remove("is-invalid"));
 }
