@@ -1,28 +1,63 @@
+from pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus, value
+
 def optimize_cuts(material_length, pieces, kerf=0):
-    pieces_sorted = sorted(pieces, reverse=True)
+    # Criar o problema de otimização
+    prob = LpProblem("Cutting_Stock_Problem", LpMinimize)
+
+    # Preparar dados: contar peças por tamanho
+    piece_counts = {}
+    for p in pieces:
+        piece_counts[p] = piece_counts.get(p, 0) + 1
+    unique_pieces = list(piece_counts.keys())
+
+    # Variáveis: y_j = 1 se a barra j for usada, x_ij = quantidade da peça i na barra j
+    max_bars = len(pieces)  # Limite superior para o número de barras
+    y = [LpVariable(f"y_{j}", cat="Binary") for j in range(max_bars)]
+    x = [[LpVariable(f"x_{i}_{j}", lowBound=0, cat="Integer") for j in range(max_bars)] for i in range(len(unique_pieces))]
+
+    # Função objetivo: minimizar o número de barras
+    prob += lpSum(y[j] for j in range(max_bars))
+
+    # Restrições
+    # 1. Atender à demanda de cada peça
+    for i, piece_length in enumerate(unique_pieces):
+        prob += lpSum(x[i][j] for j in range(max_bars)) >= piece_counts[piece_length], f"Demand_{i}"
+
+    # 2. Respeitar o comprimento da barra, considerando kerf
+    for j in range(max_bars):
+        # Total de peças na barra j
+        total_pieces = lpSum(x[i][j] for i in range(len(unique_pieces)))
+        # Total de espaço usado: soma das peças + kerf para cada peça exceto a última
+        total_length = lpSum(x[i][j] * unique_pieces[i] for i in range(len(unique_pieces)))
+        kerf_constraint = (total_pieces - 1) * kerf  # Kerf só entre peças
+        prob += total_length + kerf_constraint <= material_length * y[j], f"Capacity_{j}"
+
+    # Resolver o problema
+    prob.solve()
+
+    # Verificar se a solução é válida
+    if LpStatus[prob.status] != "Optimal":
+        raise ValueError("Não foi possível encontrar uma solução ótima")
+
+    # Extrair resultados
     bars = []
+    for j in range(max_bars):
+        if value(y[j]) == 1:
+            bar_pieces = []
+            for i in range(len(unique_pieces)):
+                count = int(value(x[i][j]))
+                for _ in range(count):
+                    bar_pieces.append(unique_pieces[i])
+            if bar_pieces:
+                total_used = sum(bar_pieces) + (len(bar_pieces) - 1) * kerf
+                bars.append({
+                    "pieces": bar_pieces,
+                    "remaining": material_length - total_used
+                })
 
-    for piece in pieces_sorted:
-        best_bar = None
-        min_remaining = float('inf')
-
-        for bar in bars:
-            required_space = piece + (kerf if bar["remaining"] != material_length else 0)
-            if bar["remaining"] >= required_space and bar["remaining"] - required_space < min_remaining:
-                best_bar = bar
-                min_remaining = bar["remaining"] - required_space
-
-        if best_bar:
-            best_bar["pieces"].append(piece)
-            best_bar["remaining"] -= (piece + (kerf if best_bar["remaining"] != material_length else 0))
-        else:
-            bars.append({
-                "pieces": [piece],
-                "remaining": material_length - piece
-            })
-
+    # Calcular métricas
     total_waste = sum(bar["remaining"] for bar in bars)
-    efficiency = (1 - (total_waste / (len(bars) * material_length))) * 100
+    efficiency = (1 - (total_waste / (len(bars) * material_length))) * 100 if bars else 0
 
     return {
         "bars": bars,

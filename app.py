@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
+import os
 from backend.cut_optimizer import optimize_cuts
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from pylatex import Document, Section, Subsection, Command, Package
+from pylatex.utils import NoEscape
+import io
 
 app = Flask(__name__)
 
@@ -14,7 +14,6 @@ def home():
 @app.route("/optimize", methods=["POST"])
 def optimize():
     data = request.json
-    logger.info(f"Recebido: material_length={data['material_length']}, pieces={data['pieces']}, kerf={data.get('kerf', 0)}")
     material_length = data.get("material_length")
     pieces = data.get("pieces", [])
     kerf = data.get("kerf", 0)
@@ -29,6 +28,52 @@ def optimize():
 
     result = optimize_cuts(material_length, pieces, kerf)
     return jsonify(result)
+
+@app.route("/download_pdf", methods=["POST"])
+def download_pdf():
+    data = request.json
+    material_length = data.get("material_length")
+    pieces = data.get("pieces", [])
+    kerf = data.get("kerf", 0)
+    result = optimize_cuts(material_length, pieces, kerf)
+
+    # Criar documento LaTeX
+    doc = Document()
+    doc.packages.append(Package('geometry', options=['a4paper', 'margin=1in']))
+    doc.packages.append(Package('fontenc', options=['T1']))
+    doc.packages.append(Package('inputenc', options=['utf8']))
+    doc.packages.append(Package('lmodern'))
+    doc.preamble.append(Command('title', 'Relatório de Otimização de Cortes'))
+    doc.preamble.append(Command('author', 'xAI Cut Optimizer'))
+    doc.preamble.append(Command('date', NoEscape(r'\today')))
+    doc.append(NoEscape(r'\maketitle'))
+
+    with doc.create(Section('Resultados')):
+        doc.append(f'Comprimento do Material: {material_length}mm\n')
+        doc.append(f'Espessura do Corte (Kerf): {kerf}mm\n')
+        with doc.create(Subsection('Cortes Otimizados')):
+            for i, bar in enumerate(result["bars"], 1):
+                pieces_str = " x ".join(f"{length}mm" for length in bar["pieces"])
+                doc.append(f'Seguimento {i}: {pieces_str} | Desperdício: {bar["remaining"]:.2f}mm\n')
+        with doc.create(Subsection('Resumo')):
+            doc.append(f'Barras necessárias: {result["total_bars"]}\n')
+            doc.append(f'Desperdício total: {result["total_waste"]:.2f}mm\n')
+            doc.append(f'Eficiência: {result["efficiency"]}%')
+
+    # Gerar PDF em memória
+    pdf_buffer = io.BytesIO()
+    doc.generate_pdf('output', clean_tex=True, compiler='pdflatex')
+    with open('output.pdf', 'rb') as f:
+        pdf_buffer.write(f.read())
+    pdf_buffer.seek(0)
+    os.remove('output.pdf')  # Limpar arquivo temporário
+
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name='relatorio_cortes.pdf',
+        mimetype='application/pdf'
+    )
 
 if __name__ == "__main__":
     print("Templates path:", app.template_folder)
