@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Componente de Materiais</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .info-box {
+      max-width: 500px;
+      font-size: 0.95rem;
+    }
+    .info-column {
+      flex: 1;
+    }
+    .info-title {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 2px;
+    }
+    .info-label {
+      font-size: 0.75rem;
+      color: #6c757d;
+    }
+    .border-end-light {
+      border-right: 1px solid #dee2e6;
+    }
+  </style>
+</head>
+<body class="p-4">
+
+  <div class="border rounded shadow-sm d-flex text-center info-box">
+    
+    <!-- Ferro -->
+    <div class="info-column py-2 border-end-light">
+      <div class="info-title text-dark">1200 x4</div>
+      <div class="info-label">Ferro</div>
+    </div>
+
+    <!-- Alumínio -->
+    <div class="info-column py-2 border-end-light">
+      <div class="info-title text-danger">600 x1</div>
+      <div class="info-label fst-italic">Alumínio</div>
+    </div>
+
+    <!-- Desperdício -->
+    <div class="info-column py-2">
+      <div class="info-title text-primary">585mm</div>
+      <div class="info-label">Desperdício</div>
+    </div>
+
+  </div>
+
+</body>
+</html>

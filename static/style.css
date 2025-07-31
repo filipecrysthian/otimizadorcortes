@@ -1,12 +1,25 @@
-/* Estilo para as barras */
-.bar {
-    padding: 10px;
-    background: #f0f0f0;
-    border-radius: 5px;
-    border-left: 4px solid #4CAF50;
-    display: inline-block;
-    margin-right: 20px;
-    margin-bottom: 10px;
+.info-box {
+    max-width: 500px;
+    font-size: 0.95rem;
+}
+
+.info-column {
+    flex: 1;
+}
+
+.info-title {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.border-end-light {
+    border-right: 1px solid #dee2e6;
 }
 
 /* Estilo para o resumo */
@@ -21,4 +34,11 @@
 .totals h3 {
     margin-top: 0;
     color: #2e7d32;
+}
+
+/* Ajuste para o card de resultados */
+.card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
 }

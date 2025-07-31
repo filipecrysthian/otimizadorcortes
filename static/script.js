@@ -79,7 +79,11 @@ function displayResult(result) {
     const resultDiv = document.getElementById("result");
     resultDiv.innerHTML = ""; // Limpa o resultado anterior
 
-    // Contar peças por tamanho em cada barra
+    // Container com layout do exemplo
+    const container = document.createElement("div");
+    container.className = "border rounded shadow-sm d-flex text-center info-box";
+
+    // Adicionar colunas para cada segmento
     result.bars.forEach((bar, index) => {
         const pieceCounts = {};
         bar.pieces.forEach(piece => {
@@ -88,15 +92,30 @@ function displayResult(result) {
         const piecesStr = Object.entries(pieceCounts)
             .map(([length, count]) => `${length}mm x ${count}`)
             .join(", ");
-        const barDiv = document.createElement("div");
-        barDiv.className = "bar";
-        barDiv.innerHTML = `Segmento ${bar.name}: ${piecesStr} | Desperdício: ${bar.remaining.toFixed(2)}mm`;
-        resultDiv.appendChild(barDiv);
+
+        const column = document.createElement("div");
+        column.className = `info-column py-2 ${index < result.bars.length - 1 ? 'border-end-light' : ''}`;
+        column.innerHTML = `
+            <div class="info-title ${index === 0 ? 'text-danger' : 'text-dark'}">${piecesStr}</div>
+            <div class="info-label">${bar.name}</div>
+        `;
+        container.appendChild(column);
     });
+
+    // Coluna para desperdício
+    const wasteColumn = document.createElement("div");
+    wasteColumn.className = "info-column py-2";
+    wasteColumn.innerHTML = `
+        <div class="info-title text-primary">${result.bars.reduce((sum, bar) => sum + bar.remaining, 0).toFixed(2)}mm</div>
+        <div class="info-label">Desperdício</div>
+    `;
+    container.appendChild(wasteColumn);
+
+    resultDiv.appendChild(container);
 
     // Resumo
     const totalsDiv = document.createElement("div");
-    totalsDiv.className = "totals";
+    totalsDiv.className = "totals mt-3";
     totalsDiv.innerHTML = `
         <h3>Resumo:</h3>
         <p>Barras necessárias: ${result.total_bars}</p>
@@ -156,7 +175,7 @@ async function downloadPDF() {
         })
     });
 
-    const blob = await response.blob();
+    const blob = await pdfResponse.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
