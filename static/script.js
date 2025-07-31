@@ -5,8 +5,11 @@ async function calculate() {
     const kerfWidth = parseFloat(kerfWidthInput.value);
     const pieces = [];
     const pieceNames = [];
+    const errorMessage = document.getElementById("errorMessage");
 
-    // Limpar validações anteriores
+    // Limpar mensagens de erro
+    errorMessage.style.display = "none";
+    errorMessage.textContent = "";
     materialLengthInput.classList.remove("is-invalid");
     kerfWidthInput.classList.remove("is-invalid");
     document.querySelectorAll(".piece-name, .piece-length, .piece-qty").forEach(input => input.classList.remove("is-invalid"));
@@ -14,10 +17,14 @@ async function calculate() {
     // Validação
     if (isNaN(materialLength) || materialLength <= 0) {
         materialLengthInput.classList.add("is-invalid");
+        errorMessage.textContent = "Comprimento do material deve ser maior que 0.";
+        errorMessage.style.display = "block";
         return;
     }
     if (isNaN(kerfWidth) || kerfWidth < 0) {
         kerfWidthInput.classList.add("is-invalid");
+        errorMessage.textContent = "Espessura do corte não pode ser negativa.";
+        errorMessage.style.display = "block";
         return;
     }
 
@@ -47,70 +54,79 @@ async function calculate() {
     });
 
     if (!valid || pieces.length === 0) {
+        errorMessage.textContent = "Por favor, insira pelo menos uma peça válida.";
+        errorMessage.style.display = "block";
         return;
     }
 
-    const response = await fetch("/optimize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            material_length: materialLength,
-            pieces: pieces,
-            kerf: kerfWidth
-        })
-    });
-    
-    const result = await response.json();
-    if (result.error) {
-        alert(result.error);
-        return;
-    }
-    
-    // Adicionar nomes aos resultados
-    result.bars.forEach((bar, index) => {
-        bar.name = pieceNames[index] || `Segmento ${index + 1}`;
-    });
+    try {
+        const response = await fetch("/optimize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                material_length: materialLength,
+                pieces: pieces,
+                kerf: kerfWidth
+            })
+        });
 
-    displayResult(result);
-    document.getElementById("downloadBtn").style.display = "inline-block";
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
+        // Adicionar nomes aos resultados
+        result.bars.forEach((bar, index) => {
+            bar.name = pieceNames[index] || `Segmento ${index + 1}`;
+        });
+
+        displayResult(result);
+        document.getElementById("downloadBtn").style.display = "inline-block";
+    } catch (error) {
+        console.error("Erro ao calcular:", error);
+        errorMessage.textContent = `Erro: ${error.message}. Verifique o console para mais detalhes.`;
+        errorMessage.style.display = "block";
+    }
 }
 
 function displayResult(result) {
     const resultDiv = document.getElementById("result");
     resultDiv.innerHTML = ""; // Limpa o resultado anterior
 
-    // Container com layout do exemplo
+    // Container com layout vertical
     const container = document.createElement("div");
-    container.className = "border rounded shadow-sm d-flex text-center info-box";
+    container.className = "border rounded shadow-sm info-box";
 
-    // Adicionar colunas para cada segmento
-    result.bars.forEach((bar, index) => {
+    // Lista de barras
+    const list = document.createElement("div");
+
+    // Adicionar itens para cada barra
+    for (let i = 0; i < result.total_bars; i++) {
+        const bar = result.bars[i] || { pieces: [], remaining: 0 };
         const pieceCounts = {};
         bar.pieces.forEach(piece => {
             pieceCounts[piece] = (pieceCounts[piece] || 0) + 1;
         });
         const piecesStr = Object.entries(pieceCounts)
             .map(([length, count]) => `${length}mm x ${count}`)
-            .join(", ");
-
-        const column = document.createElement("div");
-        column.className = `info-column py-2 ${index < result.bars.length - 1 ? 'border-end-light' : ''}`;
-        column.innerHTML = `
-            <div class="info-title ${index === 0 ? 'text-danger' : 'text-dark'}">${piecesStr}</div>
-            <div class="info-label">${bar.name}</div>
+            .join(" | ");
+        
+        const item = document.createElement("div");
+        item.className = `d-flex flex-column py-2 ${i < result.total_bars - 1 ? 'border-bottom border-end-light' : ''}`;
+        item.innerHTML = `
+            <div class="info-title d-flex justify-content-center">${i + 1}. ${piecesStr} | ${bar.remaining.toFixed(2)}mm</div>
+            <div class="info-label d-flex justify-content-center">
+                ${pieceCounts.length > 0 ? Object.keys(pieceCounts).map((_, idx) => `Segmento ${idx + 1}`).join(" | ") : ''} | Desperdício
+            </div>
         `;
-        container.appendChild(column);
-    });
+        list.appendChild(item);
+    }
 
-    // Coluna para desperdício
-    const wasteColumn = document.createElement("div");
-    wasteColumn.className = "info-column py-2";
-    wasteColumn.innerHTML = `
-        <div class="info-title text-primary">${result.bars.reduce((sum, bar) => sum + bar.remaining, 0).toFixed(2)}mm</div>
-        <div class="info-label">Desperdício</div>
-    `;
-    container.appendChild(wasteColumn);
-
+    container.appendChild(list);
     resultDiv.appendChild(container);
 
     // Resumo
@@ -130,6 +146,10 @@ async function downloadPDF() {
     const kerfWidth = parseFloat(document.getElementById("kerfWidth").value);
     const pieces = [];
     const pieceNames = [];
+    const errorMessage = document.getElementById("errorMessage");
+
+    errorMessage.style.display = "none";
+    errorMessage.textContent = "";
 
     document.querySelectorAll("#pieces .piece-row").forEach((row, index) => {
         const name = row.querySelector(".piece-name").value.trim() || `Segmento ${index + 1}`;
@@ -143,47 +163,60 @@ async function downloadPDF() {
         }
     });
 
-    const response = await fetch("/optimize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            material_length: materialLength,
-            pieces: pieces,
-            kerf: kerfWidth
-        })
-    });
+    try {
+        const response = await fetch("/optimize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                material_length: materialLength,
+                pieces: pieces,
+                kerf: kerfWidth
+            })
+        });
 
-    const result = await response.json();
-    if (result.error) {
-        alert(result.error);
-        return;
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        // Adicionar nomes aos resultados para o PDF
+        result.bars.forEach((bar, index) => {
+            bar.name = pieceNames[index] || `Segmento ${index + 1}`;
+        });
+
+        const pdfResponse = await fetch("/download_pdf", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                material_length: materialLength,
+                pieces: pieces,
+                kerf: kerfWidth,
+                names: pieceNames
+            })
+        });
+
+        if (!pdfResponse.ok) {
+            throw new Error(`Erro ao gerar PDF: ${pdfResponse.status}`);
+        }
+
+        const blob = await pdfResponse.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "relatorio_cortes.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Erro ao baixar PDF:", error);
+        errorMessage.textContent = `Erro: ${error.message}. Verifique o console para mais detalhes.`;
+        errorMessage.style.display = "block";
     }
-
-    // Adicionar nomes aos resultados para o PDF
-    result.bars.forEach((bar, index) => {
-        bar.name = pieceNames[index] || `Segmento ${index + 1}`;
-    });
-
-    const pdfResponse = await fetch("/download_pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            material_length: materialLength,
-            pieces: pieces,
-            kerf: kerfWidth,
-            names: pieceNames
-        })
-    });
-
-    const blob = await pdfResponse.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "relatorio_cortes.pdf";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
 }
 
 function addPiece() {
@@ -218,5 +251,6 @@ function clearForm() {
     `;
     document.getElementById("result").innerHTML = "";
     document.getElementById("downloadBtn").style.display = "none";
+    document.getElementById("errorMessage").style.display = "none";
     document.querySelectorAll(".piece-name, .piece-length, .piece-qty, #materialLength, #kerfWidth").forEach(input => input.classList.remove("is-invalid"));
 }

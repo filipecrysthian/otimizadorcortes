@@ -3,23 +3,25 @@
     font-size: 0.95rem;
 }
 
-.info-column {
-    flex: 1;
-}
-
 .info-title {
     font-weight: bold;
     font-size: 1rem;
     margin-bottom: 2px;
+    word-break: break-all; /* Permite que o texto quebre se necessário */
 }
 
 .info-label {
     font-size: 0.75rem;
     color: #6c757d;
+    word-break: break-all; /* Permite que o texto quebre se necessário */
 }
 
 .border-end-light {
     border-right: 1px solid #dee2e6;
+}
+
+.border-bottom {
+    border-bottom: 1px solid #dee2e6;
 }
 
 /* Estilo para o resumo */

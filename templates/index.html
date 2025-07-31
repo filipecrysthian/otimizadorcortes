@@ -28,7 +28,7 @@
             <h3>Peças Necessárias:</h3>
             <div id="pieces">
                 <div class="piece-row d-flex gap-2 mb-2">
-                    <input type="text" class="form-control piece-name" placeholder="Nome do Segmento">
+                    <input type="text" class="form-control piece-name" placeholder="Nome do Segmento (ex.: Segmento 1)">
                     <input type="number" class="form-control piece-length" placeholder="Comprimento (mm)" min="1">
                     <input type="number" class="form-control piece-qty" placeholder="Quantidade" value="1" min="1">
                     <button class="btn btn-danger remove-btn" onclick="removePiece(this)"><i class="bi bi-trash"></i> Remover</button>
@@ -44,6 +44,7 @@
         </div>
 
         <div id="result" class="mt-4 card p-3"></div>
+        <div id="errorMessage" class="mt-2 text-danger" style="display: none;"></div>
     </div>
 
     <!-- Bootstrap JS -->
