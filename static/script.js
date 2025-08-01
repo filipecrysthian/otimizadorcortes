@@ -95,55 +95,47 @@ async function calculate() {
 }
 
 function displayResult(result) {
-    const resultDiv = document.getElementById("result");
-    resultDiv.innerHTML = ""; // Limpa o resultado anterior
+  const resultDiv = document.getElementById('result');
+  resultDiv.innerHTML = '';
 
-    // Container com layout vertical
-    const container = document.createElement("div");
-    container.className = "border rounded shadow-sm info-box";
+  if (!result || !result.formatted_bars) {
+    resultDiv.innerHTML = '<div class="alert alert-danger">Erro ao calcular os cortes.</div>';
+    return;
+  }
 
-    // Lista de barras
-    const list = document.createElement("div");
+  const info = `
+    <div class="card mb-3 w-100">
+      <div class="card-body">
+        <h5 class="card-title">Resumo</h5>
+        <p><strong>Total de material:</strong> ${result.material_total}mm</p>
+        <p><strong>Barras utilizadas:</strong> ${result.bars_needed}</p>
+        <p><strong>Material utilizado:</strong> ${result.material_used}mm</p>
+        <p><strong>Total de desperdício:</strong> ${result.total_waste}mm</p>
+        <p><strong>Total de cortes:</strong> ${result.total_cuts}</p>
+        <p><strong>Eficiência:</strong> ${result.efficiency.toFixed(2)}%</p>
+      </div>
+    </div>`;
 
-    // Adicionar itens para cada barra
-    for (let i = 0; i < result.bars_needed; i++) {
-        const bar = result.bars[i] || { pieces: [], remaining: 0 };
-        const pieceCounts = {};
-        bar.pieces.forEach(piece => {
-            pieceCounts[piece] = (pieceCounts[piece] || 0) + 1;
-        });
-        const piecesStr = Object.entries(pieceCounts)
-            .map(([length, count]) => `${length}mm x ${count}`)
-            .join(" | ");
-        
-        const item = document.createElement("div");
-        item.className = `d-flex flex-column py-2 ${i < result.bars_needed - 1 ? 'border-bottom border-end-light' : ''}`;
-        item.innerHTML = `
-            <div class="info-title d-flex justify-content-center">${i + 1}. ${piecesStr} | ${bar.remaining.toFixed(2)}mm</div>
-            <div class="info-label d-flex justify-content-center">
-                ${pieceCounts.length > 0 ? Object.keys(pieceCounts).map((_, idx) => bar.name || `Segmento ${idx + 1}`).join(" | ") : ''} | Desperdício
-            </div>
-        `;
-        list.appendChild(item);
-    }
+  const barsList = result.formatted_bars.map((bar, index) => {
+    const barraLabel = `Barra ${index + 1}`;
+    
+    // Remove "// 6000mm / Barra X | " ou qualquer prefixo até o primeiro "| "
+    const segmentos = bar.split('| ').slice(1).join('| ').trim();
 
-    container.appendChild(list);
-    resultDiv.appendChild(container);
-
-    // Resumo
-    const totalsDiv = document.createElement("div");
-    totalsDiv.className = "totals mt-3";
-    totalsDiv.innerHTML = `
-        <h3>Resumo:</h3>
-        <p>Material total: ${result.material_total.toFixed(2)}mm</p>
-        <p>Barras necessárias: ${result.bars_needed}</p>
-        <p>Material usado: ${result.material_used.toFixed(2)}mm</p>
-        <p>Desperdício total: ${result.total_waste.toFixed(2)}mm</p>
-        <p>Total de cortes: ${result.total_cuts}</p>
-        <p>Eficiência: ${result.efficiency}%</p>
+    return `
+      <div class="card mb-3 w-100">
+        <div class="card-body">
+          <h5 class="card-title">${barraLabel}</h5>
+          <p class="card-text">${segmentos}</p>
+        </div>
+      </div>
     `;
-    resultDiv.appendChild(totalsDiv);
+  }).join('');
+
+  resultDiv.innerHTML = info + barsList;
 }
+
+
 
 async function downloadPDF() {
     const materialLength = parseFloat(document.getElementById("materialLength").value);

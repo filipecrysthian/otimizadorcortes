@@ -44,3 +44,20 @@
     border: 1px solid #dee2e6;
     border-radius: 10px;
 }
+
+.list-group-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    margin-bottom: 5px;
+    border-radius: 6px;
+}
+
+.list-group-item h6 {
+    font-weight: bold;
+}
+
+.list-group-item p {
+    font-size: 0.9rem;
+    color: #343a40;
+    margin-bottom: 0;
+}
