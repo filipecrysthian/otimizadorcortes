@@ -66,7 +66,8 @@ async function calculate() {
             body: JSON.stringify({
                 material_length: materialLength,
                 pieces: pieces,
-                kerf: kerfWidth
+                kerf: kerfWidth,
+                stock: 500  // Adicionado para compatibilidade com o backend
             })
         });
 
@@ -105,7 +106,7 @@ function displayResult(result) {
     const list = document.createElement("div");
 
     // Adicionar itens para cada barra
-    for (let i = 0; i < result.total_bars; i++) {
+    for (let i = 0; i < result.bars_needed; i++) {
         const bar = result.bars[i] || { pieces: [], remaining: 0 };
         const pieceCounts = {};
         bar.pieces.forEach(piece => {
@@ -116,11 +117,11 @@ function displayResult(result) {
             .join(" | ");
         
         const item = document.createElement("div");
-        item.className = `d-flex flex-column py-2 ${i < result.total_bars - 1 ? 'border-bottom border-end-light' : ''}`;
+        item.className = `d-flex flex-column py-2 ${i < result.bars_needed - 1 ? 'border-bottom border-end-light' : ''}`;
         item.innerHTML = `
             <div class="info-title d-flex justify-content-center">${i + 1}. ${piecesStr} | ${bar.remaining.toFixed(2)}mm</div>
             <div class="info-label d-flex justify-content-center">
-                ${pieceCounts.length > 0 ? Object.keys(pieceCounts).map((_, idx) => `Segmento ${idx + 1}`).join(" | ") : ''} | Desperdício
+                ${pieceCounts.length > 0 ? Object.keys(pieceCounts).map((_, idx) => bar.name || `Segmento ${idx + 1}`).join(" | ") : ''} | Desperdício
             </div>
         `;
         list.appendChild(item);
@@ -134,8 +135,11 @@ function displayResult(result) {
     totalsDiv.className = "totals mt-3";
     totalsDiv.innerHTML = `
         <h3>Resumo:</h3>
-        <p>Barras necessárias: ${result.total_bars}</p>
+        <p>Material total: ${result.material_total.toFixed(2)}mm</p>
+        <p>Barras necessárias: ${result.bars_needed}</p>
+        <p>Material usado: ${result.material_used.toFixed(2)}mm</p>
         <p>Desperdício total: ${result.total_waste.toFixed(2)}mm</p>
+        <p>Total de cortes: ${result.total_cuts}</p>
         <p>Eficiência: ${result.efficiency}%</p>
     `;
     resultDiv.appendChild(totalsDiv);
@@ -170,7 +174,8 @@ async function downloadPDF() {
             body: JSON.stringify({
                 material_length: materialLength,
                 pieces: pieces,
-                kerf: kerfWidth
+                kerf: kerfWidth,
+                stock: 500  // Adicionado para compatibilidade
             })
         });
 
