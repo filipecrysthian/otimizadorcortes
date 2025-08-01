@@ -236,7 +236,7 @@ function removePiece(button) {
 
 function clearForm() {
     document.getElementById("materialLength").value = "6000";
-    document.getElementById("kerfWidth").value = "3";
+    document.getElementById("kerfWidth").value = "0";
     const piecesDiv = document.getElementById("pieces");
     piecesDiv.innerHTML = `
         <div class="piece-row d-flex gap-2 mb-2">

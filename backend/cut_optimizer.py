@@ -79,7 +79,7 @@ def optimize_cuts(material_length, pieces, kerf=0, stock=500):
     material_total = material_length * len(optimized_bars)
     total_waste = sum(bar["remaining"] for bar in optimized_bars)
     material_used = material_total - total_waste
-    total_cuts = sum(len(bar["pieces"]) - 1 for bar in optimized_bars if bar["pieces"])
+    total_cuts = total_cuts = sum(len(bar["pieces"]) for bar in optimized_bars if bar["pieces"])
     efficiency = (1 - (total_waste / material_total)) * 100 if material_total else 0
 
     print(f"Barras otimizadas: {optimized_bars}", file=sys.stderr)
