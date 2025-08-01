@@ -18,7 +18,7 @@ def optimize():
     data = request.json
     material_length = data.get("material_length", 6000)
     pieces = data.get("pieces", [])
-    kerf = data.get("kerf", 3)
+    kerf = data.get("kerf", 0)
 
     print(f"Dados recebidos: material_length={material_length}, pieces={pieces}, kerf={kerf}", file=sys.stderr)
 
