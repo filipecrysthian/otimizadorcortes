@@ -43,80 +43,99 @@ def optimize():
         print("Erro na otimização: {}".format(str(e)), file=sys.stderr)
         return jsonify({"error": str(e)}), 500
 
-@app.route("/export", methods=["POST"])
+@app.route('/export', methods=['POST'])
 def export_pdf():
-    data = request.get_json()
-    buffer = BytesIO()
+    data = request.json
+    formatted_bars = data.get("formatted_bars", [])
+    material_total = data.get("material_total", 0)
+    material_used = data.get("material_used", 0)
+    total_waste = data.get("total_waste", 0)
+    total_cuts = data.get("total_cuts", 0)
+    efficiency = data.get("efficiency", 0)
 
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     margin = 20 * mm
-    y = height - margin
-    line_height = 15
-
-    c = canvas.Canvas(buffer, pagesize=A4)
+    y = height - 50
+    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     def draw_footer(page_num, total_pages):
-        timestamp = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        c.setFont("Helvetica-Oblique", 9)
+        c.setFont("Helvetica-Oblique", 8)
         c.drawString(margin, 10 * mm, f"Gerado em: {timestamp}")
         c.drawRightString(width - margin, 10 * mm, f"Página {page_num} de {total_pages}")
 
-    def add_header():
+    pages = []
+    page_num = 1
+
+    def new_page():
+        nonlocal y, page_num
+        c.showPage()
+        pages.append(c.getpdfdata())
+        page_num += 1
+        y = height - 50
+
+    # Título centralizado
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width / 2, y, "Relatório de Otimização de Corte")
+    y -= 40
+
+    # Informações gerais
+    c.setFont("Helvetica", 11)
+    c.drawString(50, y, f"Material total: {material_total} mm")
+    y -= 20
+    c.drawString(50, y, f"Material utilizado: {material_used} mm")
+    y -= 20
+    c.drawString(50, y, f"Desperdício: {total_waste} mm")
+    y -= 20
+    c.drawString(50, y, f"Total de cortes: {total_cuts}")
+    y -= 20
+    c.drawString(50, y, f"Eficiência: {efficiency:.1f}%")
+    y -= 30
+
+    # Cabeçalho da "tabela"
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(50, y, "Detalhamento por barra:")
+    y -= 20
+
+    def draw_table_header():
         nonlocal y
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(width / 2, y, "Relatório de Otimização de Corte")
-        y -= 30
-
-        c.setFont("Helvetica", 12)
-        resumo = [
-            f"Material total: {data['material_total']} mm",
-            f"Material utilizado: {data['material_used']} mm",
-            f"Desperdício: {data['total_waste']} mm",
-            f"Total de cortes: {data['total_cuts']}",
-            f"Eficiência: {round(data['efficiency'], 1)}%"
-        ]
-        for linha in resumo:
-            c.drawString(margin, y, linha)
-            y -= line_height
-
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(50, y, "Barra")
+        c.drawString(100, y, "Segmentos")
+        c.drawString(400, y, "Desperdício")
+        y -= 15
+        c.line(50, y, 550, y)
         y -= 10
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(margin, y, "Detalhamento por barra:")
-        y -= line_height
 
-    add_header()
-
+    draw_table_header()
     c.setFont("Helvetica", 10)
 
-    barra_num = 1
-    for bar in data["formatted_bars"]:
-        parts = bar.split("|")
-        segmentos = " | ".join(p.strip() for p in parts[1:])
-        texto = f"Barra {barra_num} | {segmentos}"
-
-        if y < margin + 30:
-            draw_footer(c.getPageNumber(), 999)  # temporário
-            c.showPage()
-            y = height - margin
-            add_header()
+    for bar in formatted_bars:
+        if y < 70:
+            draw_footer(page_num, '___')
+            new_page()
+            draw_table_header()
             c.setFont("Helvetica", 10)
 
-        c.drawString(margin, y, texto)
-        y -= line_height
-        barra_num += 1
+        # Exemplo: "Barra 1 | Segmento 1 - 800 x 7 | Desperdício - 400mm"
+        partes = bar.split("|")
+        barra = partes[0].strip().replace("6000mm /", "").replace("Barra ", "")
+        segmentos = " | ".join(p.strip() for p in partes[1:-1])
+        desperdicio = partes[-1].replace("Desperdício - ", "").strip()
 
-    # Total de páginas
-    total_pages = c.getPageNumber()
-    draw_footer(total_pages, total_pages)
+        c.drawString(50, y, barra)
+        c.drawString(100, y, segmentos)
+        c.drawString(400, y, desperdicio)
+        y -= 15
+
+    # Última página
+    draw_footer(page_num, page_num)
+    c.showPage()
     c.save()
 
     buffer.seek(0)
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name="relatorio_otimizacao.pdf",
-        mimetype="application/pdf"
-    )
+    return send_file(buffer, as_attachment=True, download_name="relatorio_otimizacao.pdf", mimetype="application/pdf")
 
 if __name__ == "__main__":
     print("Iniciando servidor Flask", file=sys.stderr)
