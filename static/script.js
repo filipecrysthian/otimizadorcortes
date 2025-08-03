@@ -1,3 +1,5 @@
+let lastResult = null;
+
 async function calculate() {
     const materialLengthInput = document.getElementById("materialLength");
     const kerfWidthInput = document.getElementById("kerfWidth");
@@ -86,7 +88,8 @@ async function calculate() {
         });
 
         displayResult(result);
-        document.getElementById("downloadBtn").style.display = "inline-block";
+        lastResult = result;
+        
     } catch (error) {
         console.error("Erro ao calcular:", error);
         errorMessage.textContent = `Erro: ${error.message}. Verifique o console para mais detalhes.`;
@@ -135,86 +138,41 @@ function displayResult(result) {
   resultDiv.innerHTML = info + barsList;
 }
 
+// Mostrar botão de exportação e configurar evento
+const exportBtn = document.getElementById("export-btn");
+exportBtn.style.display = "block";
+exportBtn.onclick = () => {
 
-
-async function downloadPDF() {
-    const materialLength = parseFloat(document.getElementById("materialLength").value);
-    const kerfWidth = parseFloat(document.getElementById("kerfWidth").value);
-    const pieces = [];
-    const pieceNames = [];
-    const errorMessage = document.getElementById("errorMessage");
-
-    errorMessage.style.display = "none";
-    errorMessage.textContent = "";
-
-    document.querySelectorAll("#pieces .piece-row").forEach((row, index) => {
-        const name = row.querySelector(".piece-name").value.trim() || `Segmento ${index + 1}`;
-        const length = parseFloat(row.querySelector(".piece-length").value);
-        const qty = parseInt(row.querySelector(".piece-qty").value);
-        if (length && qty) {
-            for (let i = 0; i < qty; i++) {
-                pieces.push(length);
-                pieceNames.push(name);
-            }
-        }
-    });
-
-    try {
-        const response = await fetch("/optimize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                material_length: materialLength,
-                pieces: pieces,
-                kerf: kerfWidth,
-                stock: 500  // Adicionado para compatibilidade
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
-        }
-
-        const result = await response.json();
-        if (result.error) {
-            throw new Error(result.error);
-        }
-
-        // Adicionar nomes aos resultados para o PDF
-        result.bars.forEach((bar, index) => {
-            bar.name = pieceNames[index] || `Segmento ${index + 1}`;
-        });
-
-        const pdfResponse = await fetch("/download_pdf", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                material_length: materialLength,
-                pieces: pieces,
-                kerf: kerfWidth,
-                names: pieceNames
-            })
-        });
-
-        if (!pdfResponse.ok) {
-            throw new Error(`Erro ao gerar PDF: ${pdfResponse.status}`);
-        }
-
-        const blob = await pdfResponse.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "relatorio_cortes.pdf";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Erro ao baixar PDF:", error);
-        errorMessage.textContent = `Erro: ${error.message}. Verifique o console para mais detalhes.`;
-        errorMessage.style.display = "block";
+    if (!lastResult) {
+        alert("Nenhum resultado disponível para exportar.");
+        return;
     }
-}
+
+    fetch('/export', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(lastResult)
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Erro ao gerar o PDF');
+        }
+        return res.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "relatorio_otimizacao.pdf";
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        alert("Erro ao exportar o PDF: " + error.message);
+    });
+};
 
 function addPiece() {
     const piecesDiv = document.getElementById("pieces");
@@ -222,7 +180,7 @@ function addPiece() {
     const newRow = document.createElement("div");
     newRow.className = "piece-row d-flex gap-2 mb-2";
     newRow.innerHTML = `
-        <input type="text" class="form-control piece-name" placeholder="Nome do Segmento (ex.: Segmento ${pieceCount})">
+        <input type="text" class="form-control piece-name" placeholder="Nome do Segmento">
         <input type="number" class="form-control piece-length" placeholder="Comprimento (mm)" min="1">
         <input type="number" class="form-control piece-qty" placeholder="Quantidade" value="1" min="1">
         <button class="btn btn-danger remove-btn" onclick="removePiece(this)"><i class="bi bi-trash"></i> Remover</button>
@@ -240,7 +198,7 @@ function clearForm() {
     const piecesDiv = document.getElementById("pieces");
     piecesDiv.innerHTML = `
         <div class="piece-row d-flex gap-2 mb-2">
-            <input type="text" class="form-control piece-name" placeholder="Nome do Segmento (ex.: Segmento 1)">
+            <input type="text" class="form-control piece-name" placeholder="Nome do Segmento">
             <input type="number" class="form-control piece-length" placeholder="Comprimento (mm)" min="1">
             <input type="number" class="form-control piece-qty" placeholder="Quantidade" value="1" min="1">
             <button class="btn btn-danger remove-btn" onclick="removePiece(this)"><i class="bi bi-trash"></i> Remover</button>
