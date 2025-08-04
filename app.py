@@ -3,6 +3,7 @@ from backend.cut_optimizer import optimize_cuts
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
+from reportlab.lib import colors
 from io import BytesIO
 from datetime import datetime
 import sys
@@ -65,13 +66,12 @@ def export_pdf():
         c.drawString(margin, 10 * mm, f"Gerado em: {timestamp}")
         c.drawRightString(width - margin, 10 * mm, f"Página {page_num} de {total_pages}")
 
-    pages = []
     page_num = 1
 
     def new_page():
         nonlocal y, page_num
         c.showPage()
-        pages.append(c.getpdfdata())
+        draw_footer(page_num, '___')
         page_num += 1
         y = height - 50
 
@@ -80,54 +80,82 @@ def export_pdf():
     c.drawCentredString(width / 2, y, "Relatório de Otimização de Corte")
     y -= 40
 
-    # Informações gerais
-    c.setFont("Helvetica", 11)
-    c.drawString(50, y, f"Material total: {material_total} mm")
-    y -= 20
-    c.drawString(50, y, f"Material utilizado: {material_used} mm")
-    y -= 20
-    c.drawString(50, y, f"Desperdício: {total_waste} mm")
-    y -= 20
-    c.drawString(50, y, f"Total de cortes: {total_cuts}")
-    y -= 20
-    c.drawString(50, y, f"Eficiência: {efficiency:.1f}%")
-    y -= 30
+    # Título do Resumo
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(50, y, "Resumo dos Materiais:")
+    y -= 25
 
-    # Cabeçalho da "tabela"
+    # Cabeçalhos e dados do resumo em formato de tabela com bordas
+    resumo_headers = ["Material total", "Material utilizado", "Desperdício", "Total de cortes", "Eficiência"]
+    resumo_data = [f"{material_total} mm", f"{material_used} mm", f"{total_waste} mm", str(total_cuts), f"{efficiency:.1f}%"]
+
+    col_widths = [90, 110, 90, 100, 80]
+    x_pos = 50
+
+    # Cabeçalhos
+    c.setFont("Helvetica-Bold", 10)
+    for i, header in enumerate(resumo_headers):
+        c.setFillColor(colors.lightgrey)
+        c.rect(x_pos, y, col_widths[i], 18, fill=1)
+        c.setFillColor(colors.black)
+        c.drawCentredString(x_pos + col_widths[i] / 2, y + 5, header)
+        x_pos += col_widths[i]
+    y -= 18
+
+    # Dados
+    x_pos = 50
+    c.setFont("Helvetica", 10)
+    for i, value in enumerate(resumo_data):
+        c.rect(x_pos, y, col_widths[i], 18)
+        c.drawCentredString(x_pos + col_widths[i] / 2, y + 5, value)
+        x_pos += col_widths[i]
+    y -= 40
+
+    # Cabeçalho da "tabela" de cortes
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Detalhamento por barra:")
-    y -= 20
+    y -= 25
 
     def draw_table_header():
         nonlocal y
+        headers = ["Barra", "Segmentos", "Desperdício"]
+        col_widths = [50, 320, 100]
+        x_pos = 50
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, y, "Barra")
-        c.drawString(100, y, "Segmentos")
-        c.drawString(400, y, "Desperdício")
-        y -= 15
-        c.line(50, y, 550, y)
-        y -= 10
+        for i, header in enumerate(headers):
+            c.setFillColor(colors.lightgrey)
+            c.rect(x_pos, y, col_widths[i], 18, fill=1)
+            c.setFillColor(colors.black)
+            c.drawCentredString(x_pos + col_widths[i] / 2, y + 5, header)
+            x_pos += col_widths[i]
+        y -= 18
+        return col_widths
 
-    draw_table_header()
+    col_widths = draw_table_header()
     c.setFont("Helvetica", 10)
 
     for bar in formatted_bars:
         if y < 70:
             draw_footer(page_num, '___')
             new_page()
-            draw_table_header()
+            col_widths = draw_table_header()
             c.setFont("Helvetica", 10)
 
-        # Exemplo: "Barra 1 | Segmento 1 - 800 x 7 | Desperdício - 400mm"
+        # Remover "//" e extrair informações
+        bar = bar.lstrip("/ ").strip()
+
         partes = bar.split("|")
         barra = partes[0].strip().replace("6000mm /", "").replace("Barra ", "")
         segmentos = " | ".join(p.strip() for p in partes[1:-1])
         desperdicio = partes[-1].replace("Desperdício - ", "").strip()
 
-        c.drawString(50, y, barra)
-        c.drawString(100, y, segmentos)
-        c.drawString(400, y, desperdicio)
-        y -= 15
+        x_pos = 50
+        values = [barra, segmentos, desperdicio]
+        for i, val in enumerate(values):
+            c.rect(x_pos, y, col_widths[i], 18)
+            c.drawCentredString(x_pos + col_widths[i] / 2, y + 5, val)
+            x_pos += col_widths[i]
+        y -= 18
 
     # Última página
     draw_footer(page_num, page_num)
