@@ -168,4 +168,4 @@ def export_pdf():
 if __name__ == "__main__":
     print("Iniciando servidor Flask", file=sys.stderr)
     print("Templates path:", app.template_folder, file=sys.stderr)
-    app.run(host="0.0.0.0",debug=True)
+    app.run(debug=True)

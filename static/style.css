@@ -1,63 +1,96 @@
 .info-box {
-    max-width: 500px;
-    font-size: 0.95rem;
+  max-width: 500px;
+  font-size: 0.95rem;
 }
 
 .info-title {
-    font-weight: bold;
-    font-size: 1rem;
-    margin-bottom: 2px;
-    word-break: break-all; /* Permite que o texto quebre se necessário */
+  font-weight: bold;
+  font-size: 1rem;
+  margin-bottom: 2px;
+  word-break: break-all; /* Permite que o texto quebre se necessário */
 }
 
 .info-label {
-    font-size: 0.75rem;
-    color: #6c757d;
-    word-break: break-all; /* Permite que o texto quebre se necessário */
+  font-size: 0.75rem;
+  color: #6c757d;
+  word-break: break-all; /* Permite que o texto quebre se necessário */
 }
 
 .border-end-light {
-    border-right: 1px solid #dee2e6;
+  border-right: 1px solid #dee2e6;
 }
 
 .border-bottom {
-    border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
 }
 
 /* Estilo para o resumo */
 .totals {
-    margin-top: 20px;
-    padding: 15px;
-    background: #e9f7ef;
-    border-radius: 5px;
-    border: 1px solid #4CAF50;
+  margin-top: 20px;
+  padding: 15px;
+  background: #e9f7ef;
+  border-radius: 5px;
+  border: 1px solid #4caf50;
 }
 
 .totals h3 {
-    margin-top: 0;
-    color: #2e7d32;
+  margin-top: 0;
+  color: #2e7d32;
 }
 
 /* Ajuste para o card de resultados */
 .card {
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 10px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
 }
 
 .list-group-item {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    margin-bottom: 5px;
-    border-radius: 6px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  margin-bottom: 5px;
+  border-radius: 6px;
 }
 
 .list-group-item h6 {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .list-group-item p {
-    font-size: 0.9rem;
-    color: #343a40;
-    margin-bottom: 0;
+  font-size: 0.9rem;
+  color: #343a40;
+  margin-bottom: 0;
 }
+
+.footer a {
+  text-decoration: none;
+  color: #0d6efd;
+}
+.footer a:hover {
+  text-decoration: underline;
+}
+
+.footer-icon {
+  font-size: 1.5rem;
+  color: #333;
+  transition: color 0.2s ease;
+  text-decoration: none;
+}
+
+.footer-icon:hover {
+  text-decoration: none;
+}
+
+.email-icon:hover {
+  color: #d93025; /* vermelho Gmail */
+}
+
+.linkedin-icon:hover {
+  color: #0a66c2; /* azul LinkedIn */
+}
+
+.whatsapp-icon:hover {
+  color: #25d366;
+}
+
+
